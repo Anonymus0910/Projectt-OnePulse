@@ -423,12 +423,12 @@ if __name__ == '__main__':
 
     print("\n" + "="*50)
     print("  ⚡ OnePulse backend is running!")
-    print("  🌐 URL  → http://localhost:5000")
+    print("  🌐 URL  → http://localhost:7860")
     print("  📁 Open Frontend/index.html in your browser")
     print("  🛑 Stop → Ctrl+C")
     print("="*50 + "\n")
 
-    app.run(debug=True, use_reloader=False, port=5000)
+    app.run(debug=True, use_reloader=False, port=7860)
     
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860)

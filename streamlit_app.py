@@ -361,6 +361,12 @@ if 'best_times' not in st.session_state:
     st.session_state.best_times = []
 if 'show_ai_suggestions' not in st.session_state:
     st.session_state.show_ai_suggestions = False
+if 'uploaded_file_data' not in st.session_state:
+    st.session_state.uploaded_file_data = None
+if 'uploaded_file_name' not in st.session_state:
+    st.session_state.uploaded_file_name = ""
+if 'uploaded_file_type' not in st.session_state:
+    st.session_state.uploaded_file_type = ""
 
 # ============================================
 # HEADER WITH LOGO & THEME TOGGLE
@@ -487,30 +493,47 @@ def render_schedule_form():
             help="Drop your file here or click to browse"
         )
         
-        # Store uploaded file in session state properly
+        # Store uploaded file in session state properly - read bytes immediately
         if uploaded_file is not None:
             file_size = uploaded_file.size / (1024 * 1024)
             file_type = uploaded_file.type.split('/')[0] if '/' in uploaded_file.type else 'file'
             type_emoji = {'image': '🖼️', 'video': '🎬', 'audio': '🎵', 'text': '📄', 'application': '📎'}.get(file_type, '📎')
             
-            st.success(f"{type_emoji} {uploaded_file.name} ({file_size:.1f} MB) - Ready!")
-            
-            # Store file data in session state for later use
-            st.session_state.uploaded_file_data = uploaded_file
+            # Read bytes immediately so they survive reruns
+            file_bytes = uploaded_file.read()
+            st.session_state.uploaded_file_data = file_bytes
             st.session_state.uploaded_file_name = uploaded_file.name
+            st.session_state.uploaded_file_type = uploaded_file.type
             
-            # Show preview for images
+            st.success(f"{type_emoji} **{uploaded_file.name}** ({file_size:.1f} MB) — Ready to schedule!")
+            
+            # Show preview for images using stored bytes
             if file_type == 'image':
                 try:
                     from PIL import Image
                     import io
-                    image = Image.open(uploaded_file)
+                    image = Image.open(io.BytesIO(file_bytes))
+                    st.image(image, caption="Preview", width=150)
+                except:
+                    pass
+        elif st.session_state.get('uploaded_file_data'):
+            # File was previously uploaded — keep showing its info
+            name = st.session_state.get('uploaded_file_name', 'File')
+            ftype = st.session_state.get('uploaded_file_type', '')
+            file_type2 = ftype.split('/')[0] if '/' in ftype else 'file'
+            type_emoji2 = {'image': '🖼️', 'video': '🎬', 'audio': '🎵', 'text': '📄', 'application': '📎'}.get(file_type2, '📎')
+            size_mb = len(st.session_state.uploaded_file_data) / (1024 * 1024)
+            st.success(f"{type_emoji2} **{name}** ({size_mb:.1f} MB) — Ready to schedule!")
+            if file_type2 == 'image':
+                try:
+                    from PIL import Image
+                    import io
+                    image = Image.open(io.BytesIO(st.session_state.uploaded_file_data))
                     st.image(image, caption="Preview", width=150)
                 except:
                     pass
         else:
             st.info("💡 Drop your file here or click to browse\n\nSupported: Images, Videos, GIFs, Audio, Documents")
-            st.session_state.uploaded_file_data = None
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -636,39 +659,34 @@ def render_schedule_form():
                     st.session_state.uploaded_file_data = None
                     st.rerun()
     
-    else:  # Custom Time - FIXED with proper date and time picker
-        st.markdown("#### Select date and time")
+    else:  # Custom Time - native date + time pickers
+        st.markdown("#### 📅 Select your preferred date and time")
         
-        # Create two columns for date and time
         col1, col2 = st.columns(2)
         
         with col1:
-            # Beautiful date picker like in your screenshot
             schedule_date = st.date_input(
-                "📅 DATE",
-                datetime.now(),
-                min_value=datetime.now(),
-                help="Choose the date for your post"
+                "📅 Select Date",
+                datetime.now().date(),
+                min_value=datetime.now().date(),
+                help="Pick the date for your post"
             )
         
         with col2:
-            # Simple time picker
             schedule_time = st.time_input(
-                "⏰ TIME",
-                datetime.now().time(),
-                help="Choose the time (HH:MM AM/PM)"
+                "⏰ Select Time",
+                value=datetime.now().replace(second=0, microsecond=0).time(),
+                step=900,
+                help="Pick the time (steps of 15 min)"
             )
         
-        # Display selected datetime preview
+        # Combine and preview
         selected_datetime = datetime.combine(schedule_date, schedule_time)
-        
-        # Format for display
-        formatted_date = selected_datetime.strftime("%B %d, %Y")
+        formatted_date = selected_datetime.strftime("%A, %b %d")
         formatted_time = selected_datetime.strftime("%I:%M %p")
         
-        st.info(f"📅 **Selected:** {formatted_date} at {formatted_time}")
+        st.info(f"🚨 **Selected time:** {formatted_time}  \n📅 Will be scheduled for: **{formatted_date} at {formatted_time}**")
         
-        # Warning for past scheduling
         if selected_datetime < datetime.now():
             st.error("⚠️ Cannot schedule in the past! Please select a future date/time.")
         

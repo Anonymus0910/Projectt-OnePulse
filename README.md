@@ -4,7 +4,7 @@ emoji: 🚀
 colorFrom: blue
 colorTo: indigo
 sdk: streamlit
-sdk_version: 1.56
+sdk_version: 1.35
 app_file: streamlit_app.py
 pinned: false
 ---
@@ -12,9 +12,3 @@ pinned: false
 # OnePulse Content Updater
 
 Schedule and automate your social media content with AI-powered recommendations.
-
-## Features
-- 📺 YouTube & Instagram support
-- 🤖 AI-generated captions and hashtags
-- ⏰ Best time recommendations
-- 📊 Analytics dashboard

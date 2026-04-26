@@ -3,7 +3,7 @@ title: OnePulse Content Updater
 emoji: 🚀
 colorFrom: blue
 colorTo: indigo
-sdk: docker
+sdk: streamlit
 pinned: false
 ---
 

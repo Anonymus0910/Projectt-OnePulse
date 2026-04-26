@@ -5,6 +5,7 @@ colorFrom: blue
 colorTo: indigo
 sdk: streamlit
 pinned: false
+sdk_version: 1.56.0
 ---
 
 # OnePulse Content Updater

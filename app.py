@@ -25,7 +25,8 @@ BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 DB_PATH    = os.path.join(BASE_DIR, 'onepulse.db')
 MODEL_PATH = os.path.join(BASE_DIR, 'model.pkl')
 
-app = Flask(__name__, static_folder='../Frontend', static_url_path='')
+# Changed static_folder to current directory (since files are now in root)
+app = Flask(__name__, static_folder=BASE_DIR, static_url_path='')
 CORS(app)   # allow requests from index.html (different origin)
 
 
@@ -230,11 +231,20 @@ def scheduler_loop():
 
 
 # ─────────────────────────────────────────────
-# OPTIONAL: Serve index.html directly from Flask
+# OPTIONAL: Serve index.html directly from Flask (FIXED PATH)
 # ─────────────────────────────────────────────
 @app.route('/')
 def serve_index():
-    return send_from_directory('../Frontend', 'index.html')
+    # Now serving index.html from the current directory (root)
+    return send_from_directory(BASE_DIR, 'index.html')
+
+
+# ─────────────────────────────────────────────
+# HEALTH CHECK ENDPOINT for Hugging Face
+# ─────────────────────────────────────────────
+@app.route('/health')
+def health_check():
+    return "OK", 200
 
 
 # ─────────────────────────────────────────────
@@ -411,6 +421,10 @@ def ai_best_times():
 # ─────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────
+
+@app.route('/health')
+def health():
+    return "OK", 200
 if __name__ == '__main__':
     init_db()
 
@@ -424,19 +438,8 @@ if __name__ == '__main__':
     print("\n" + "="*50)
     print("  ⚡ OnePulse backend is running!")
     print("  🌐 URL  → http://localhost:7860")
-    print("  📁 Open Frontend/index.html in your browser")
+    print("  📁 Open index.html in your browser")
     print("  🛑 Stop → Ctrl+C")
     print("="*50 + "\n")
 
-    app.run(debug=True, use_reloader=False, port=7860)
-    
-@app.route('/')
-def home():
-    return open('index.html').read()
-
-@app.route('/health')
-def health():
-    return "OK", 200
-    
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7860)
+    app.run(debug=True, use_reloader=False, host='0.0.0.0', port=7860)

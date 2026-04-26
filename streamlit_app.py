@@ -470,37 +470,36 @@ def render_schedule_form():
         description = st.text_area("💬 DESCRIPTION", placeholder="What's this post about?", height=100)
     
     with col2:
-        # Drag & drop file upload area with ALL formats supported
+        # Drag & drop file upload area - FIXED with proper storage
         st.markdown('<div class="upload-area">', unsafe_allow_html=True)
         
         # Support for ALL common media formats
         allowed_formats = [
-            # Images
-            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'heic', 'heif',
-            # Videos
-            'mp4', 'mov', 'avi', 'mkv', 'webm', 'flv', 'wmv', 'm4v', 'mpg', 'mpeg', '3gp',
-            # Audio
-            'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'wma',
-            # Documents (for platforms that support)
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico',
+            'mp4', 'mov', 'avi', 'mkv', 'webm', 'flv', 'wmv',
+            'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac',
             'pdf', 'doc', 'docx', 'txt', 'rtf'
         ]
         
         uploaded_file = st.file_uploader(
             "📎 MEDIA FILE (ANY FORMAT - Images, Videos, GIFs, Audio, Documents)",
             type=allowed_formats,
-            help="Drop your file here or click to browse - Supports all common formats!"
+            help="Drop your file here or click to browse"
         )
         
-        if uploaded_file:
+        # Store uploaded file in session state properly
+        if uploaded_file is not None:
             file_size = uploaded_file.size / (1024 * 1024)
             file_type = uploaded_file.type.split('/')[0] if '/' in uploaded_file.type else 'file'
-            type_emoji = {
-                'image': '🖼️', 'video': '🎬', 'audio': '🎵', 'text': '📄', 'application': '📎'
-            }.get(file_type, '📎')
+            type_emoji = {'image': '🖼️', 'video': '🎬', 'audio': '🎵', 'text': '📄', 'application': '📎'}.get(file_type, '📎')
             
-            st.success(f"{type_emoji} {uploaded_file.name} ({file_size:.1f} MB) - Ready to upload!")
+            st.success(f"{type_emoji} {uploaded_file.name} ({file_size:.1f} MB) - Ready!")
             
-            # Preview for images
+            # Store file data in session state for later use
+            st.session_state.uploaded_file_data = uploaded_file
+            st.session_state.uploaded_file_name = uploaded_file.name
+            
+            # Show preview for images
             if file_type == 'image':
                 try:
                     from PIL import Image
@@ -511,10 +510,11 @@ def render_schedule_form():
                     pass
         else:
             st.info("💡 Drop your file here or click to browse\n\nSupported: Images, Videos, GIFs, Audio, Documents")
+            st.session_state.uploaded_file_data = None
         
         st.markdown('</div>', unsafe_allow_html=True)
         
-        media_url = st.text_input("🔗 OR PASTE URL", placeholder="https://example.com/media.jpg")
+        media_url = st.text_input("🔗 OR PASTE URL", placeholder="https://example.com/image.jpg")
     
     # AI Generation Section
     st.markdown("---")
@@ -524,7 +524,6 @@ def render_schedule_form():
     with col2:
         if st.button("✨ Generate AI Captions, Hashtags & Best Times", use_container_width=True, type="primary"):
             with st.spinner("AI is analyzing best engagement times..."):
-                # Generate all AI content
                 st.session_state.generated_caption = ai_model.generate_caption(
                     platform, title or "My Post", description or "", niche
                 )
@@ -544,7 +543,7 @@ def render_schedule_form():
             st.markdown("#### 💬 SUGGESTED CAPTION")
             st.info(st.session_state.generated_caption)
             if st.button("📋 Use this caption", key="use_caption_btn"):
-                st.success("✅ Caption copied to field below!")
+                st.success("✅ Caption copied!")
             st.markdown('</div>', unsafe_allow_html=True)
         
         with col2:
@@ -561,14 +560,11 @@ def render_schedule_form():
         with col3:
             st.markdown('<div class="ai-card">', unsafe_allow_html=True)
             st.markdown("#### ⏰ BEST TIMES TO POST")
-            st.markdown("*Based on platform engagement data*")
-            
             for time_slot in st.session_state.best_times[:5]:
-                score_color = "#4CAF50" if time_slot['score'] > 85 else "#FFC107" if time_slot['score'] > 70 else "#FF5722"
                 st.markdown(f"""
-                <div class="best-time-card" style="background: linear-gradient(135deg, {score_color}20, transparent);">
-                    <div style="font-size: 0.9rem;">📅 {time_slot['label']}</div>
-                    <div style="font-size: 1.2rem; font-weight: bold;">{time_slot['score']}% engagement</div>
+                <div class="best-time-card">
+                    📅 {time_slot['label']}<br>
+                    <strong>{time_slot['score']}% engagement</strong>
                 </div>
                 """, unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
@@ -589,9 +585,9 @@ def render_schedule_form():
         placeholder="#hashtag1 #hashtag2 ..."
     )
     
-    # Scheduling section - FIXED with proper time picker
+    # SCHEDULE SECTION - FIXED with proper calendar and time picker
     st.markdown("---")
-    st.markdown("### 🗓️ SCHEDULE TIME")
+    st.markdown("### 🗓️ SCHEDULE TIME (OPTIONAL, AUTO IF BLANK)")
     
     # Radio button for schedule type
     schedule_type = st.radio(
@@ -605,17 +601,8 @@ def render_schedule_form():
     if schedule_type == "📅 Use AI Recommended Time" and st.session_state.best_times:
         st.markdown("#### Choose from AI recommended times:")
         
-        # Create formatted options
-        time_options = []
-        for t in st.session_state.best_times[:5]:
-            time_options.append(f"{t['label']} — {t['score']}% engagement score")
-        
-        selected_idx = st.selectbox(
-            "Recommended times",
-            range(len(time_options)),
-            format_func=lambda x: time_options[x],
-            label_visibility="collapsed"
-        )
+        time_options = [f"{t['label']} — {t['score']}% engagement" for t in st.session_state.best_times[:5]]
+        selected_idx = st.selectbox("", range(len(time_options)), format_func=lambda x: time_options[x], label_visibility="collapsed")
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -625,6 +612,8 @@ def render_schedule_form():
                 if not title:
                     st.error("❌ Please enter a title")
                 else:
+                    media_file_name = st.session_state.get('uploaded_file_name', '') if st.session_state.get('uploaded_file_data') else media_url
+                    
                     new_post = {
                         'platform': platform,
                         'niche': niche,
@@ -632,8 +621,8 @@ def render_schedule_form():
                         'description': description,
                         'caption': caption or st.session_state.generated_caption,
                         'hashtags': hashtags or " ".join(st.session_state.generated_hashtags),
-                        'media_file': uploaded_file.name if uploaded_file else media_url,
-                        'media_data': uploaded_file if uploaded_file else None,
+                        'media_file': media_file_name or media_url,
+                        'media_data': st.session_state.get('uploaded_file_data', None),
                         'scheduled_time': scheduled_datetime,
                         'status': 'scheduled',
                         'created_at': datetime.now()
@@ -644,80 +633,55 @@ def render_schedule_form():
                     st.session_state.show_ai_suggestions = False
                     st.session_state.generated_caption = ""
                     st.session_state.generated_hashtags = []
+                    st.session_state.uploaded_file_data = None
                     st.rerun()
     
-    else:  # Custom Time - FIXED with proper time picker
-        st.markdown("#### Select your preferred date and time")
+    else:  # Custom Time - FIXED with proper date and time picker
+        st.markdown("#### Select date and time")
         
-        # Create three columns for date and time selection
-        col1, col2, col3 = st.columns([2, 1, 1])
+        # Create two columns for date and time
+        col1, col2 = st.columns(2)
         
         with col1:
-            # Date picker
+            # Beautiful date picker like in your screenshot
             schedule_date = st.date_input(
-                "📅 Select Date",
+                "📅 DATE",
                 datetime.now(),
                 min_value=datetime.now(),
                 help="Choose the date for your post"
             )
         
         with col2:
-            # Hour selector (1-12)
-            hour = st.number_input(
-                "🕐 Hour",
-                min_value=1,
-                max_value=12,
-                value=9,
-                step=1,
-                help="Select hour (1-12)"
+            # Simple time picker
+            schedule_time = st.time_input(
+                "⏰ TIME",
+                datetime.now().time(),
+                help="Choose the time (HH:MM AM/PM)"
             )
         
-        with col3:
-            # Minute selector (0-59 with 15-minute intervals)
-            minute = st.selectbox(
-                "⏱️ Minute",
-                [0, 15, 30, 45],
-                index=0,
-                help="Select minutes (0, 15, 30, or 45)"
-            )
+        # Display selected datetime preview
+        selected_datetime = datetime.combine(schedule_date, schedule_time)
         
-        # AM/PM selector in a row
-        col1, col2, col3 = st.columns([1, 1, 2])
-        with col1:
-            am_pm = st.radio(
-                "AM/PM",
-                ["AM", "PM"],
-                horizontal=True,
-                index=1 if datetime.now().hour >= 12 else 0
-            )
+        # Format for display
+        formatted_date = selected_datetime.strftime("%B %d, %Y")
+        formatted_time = selected_datetime.strftime("%I:%M %p")
         
-        # Convert to 24-hour format
-        hour_24 = hour
-        if am_pm == "PM" and hour != 12:
-            hour_24 = hour + 12
-        elif am_pm == "AM" and hour == 12:
-            hour_24 = 0
+        st.info(f"📅 **Selected:** {formatted_date} at {formatted_time}")
         
-        # Display selected time for confirmation
-        selected_time_display = f"{hour:02d}:{minute:02d} {am_pm}"
-        st.info(f"⏰ Selected time: **{selected_time_display}**")
+        # Warning for past scheduling
+        if selected_datetime < datetime.now():
+            st.error("⚠️ Cannot schedule in the past! Please select a future date/time.")
         
-        # Preview of scheduled datetime
-        scheduled_datetime_preview = datetime.combine(schedule_date, datetime.min.time()).replace(hour=hour_24, minute=minute)
-        st.caption(f"📅 Will be scheduled for: **{scheduled_datetime_preview.strftime('%A, %b %d at %I:%M %p')}**")
-        
-        # Schedule button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("💾 SCHEDULE POST", type="primary", use_container_width=True):
-                scheduled_datetime = datetime.combine(schedule_date, datetime.min.time()).replace(hour=hour_24, minute=minute)
-                
-                # Validation: Can't schedule in the past
-                if scheduled_datetime < datetime.now():
-                    st.error("❌ Cannot schedule posts in the past! Please select a future date/time.")
+                if selected_datetime < datetime.now():
+                    st.error("❌ Cannot schedule posts in the past!")
                 elif not title:
                     st.error("❌ Please enter a title")
                 else:
+                    media_file_name = st.session_state.get('uploaded_file_name', '') if st.session_state.get('uploaded_file_data') else media_url
+                    
                     new_post = {
                         'platform': platform,
                         'niche': niche,
@@ -725,20 +689,20 @@ def render_schedule_form():
                         'description': description,
                         'caption': caption,
                         'hashtags': hashtags,
-                        'media_file': uploaded_file.name if uploaded_file else media_url,
-                        'media_data': uploaded_file if uploaded_file else None,
-                        'scheduled_time': scheduled_datetime,
+                        'media_file': media_file_name or media_url,
+                        'media_data': st.session_state.get('uploaded_file_data', None),
+                        'scheduled_time': selected_datetime,
                         'status': 'scheduled',
                         'created_at': datetime.now()
                     }
                     st.session_state.posts.append(new_post)
-                    st.success(f"✅ Post '{title}' scheduled for {scheduled_datetime.strftime('%A, %b %d at %I:%M %p')}!")
+                    st.success(f"✅ Post '{title}' scheduled for {formatted_date} at {formatted_time}!")
                     st.balloons()
                     st.session_state.show_ai_suggestions = False
                     st.session_state.generated_caption = ""
                     st.session_state.generated_hashtags = []
-                    st.rerun()
-# ============================================
+                    st.session_state.uploaded_file_data = None
+                    st.rerun()# ============================================
 # POSTS DISPLAY SECTION
 # ============================================
 def render_posts():

@@ -4,20 +4,17 @@ emoji: 🚀
 colorFrom: blue
 colorTo: indigo
 sdk: streamlit
+sdk_version: 1.56
+app_file: streamlit_app.py
 pinned: false
-sdk_version: 1.56.0
 ---
 
 # OnePulse Content Updater
 
-This application analyzes and updates content using machine learning.
+Schedule and automate your social media content with AI-powered recommendations.
 
 ## Features
-
-- Prompt analysis
-- Content generation
-- ML-powered recommendations
-
-## Usage
-
-Simply upload your content or enter text to get started!
+- 📺 YouTube & Instagram support
+- 🤖 AI-generated captions and hashtags
+- ⏰ Best time recommendations
+- 📊 Analytics dashboard

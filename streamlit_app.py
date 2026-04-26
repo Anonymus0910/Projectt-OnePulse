@@ -479,18 +479,10 @@ def render_schedule_form():
         # Drag & drop file upload area - FIXED with proper storage
         st.markdown('<div class="upload-area">', unsafe_allow_html=True)
         
-        # Support for ALL common media formats
-        allowed_formats = [
-            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico',
-            'mp4', 'mov', 'avi', 'mkv', 'webm', 'flv', 'wmv',
-            'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac',
-            'pdf', 'doc', 'docx', 'txt', 'rtf'
-        ]
-        
         uploaded_file = st.file_uploader(
-            "📎 MEDIA FILE (ANY FORMAT - Images, Videos, GIFs, Audio, Documents)",
-            type=allowed_formats,
-            help="Drop your file here or click to browse"
+            "📎 MEDIA FILE (ANY FORMAT — Images, Videos, GIFs, Audio, Documents)",
+            type=None,  # None = accept ALL file types
+            help="Drop your file here or click to browse — MP4, JPG, PNG, MOV, GIF, MP3, PDF..."
         )
         
         # Store uploaded file in session state properly - read bytes immediately
@@ -659,34 +651,31 @@ def render_schedule_form():
                     st.session_state.uploaded_file_data = None
                     st.rerun()
     
-    else:  # Custom Time - native date + time pickers
+    else:  # Custom Time — native browser datetime picker
         st.markdown("#### 📅 Select your preferred date and time")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             schedule_date = st.date_input(
-                "📅 Select Date",
+                "📅 DATE",
                 datetime.now().date(),
                 min_value=datetime.now().date(),
-                help="Pick the date for your post"
             )
-        
+
         with col2:
             schedule_time = st.time_input(
-                "⏰ Select Time",
+                "⏰ TIME",
                 value=datetime.now().replace(second=0, microsecond=0).time(),
-                step=900,
-                help="Pick the time (steps of 15 min)"
+                step=60,   # 1-minute steps so any minute can be picked
             )
-        
-        # Combine and preview
+
         selected_datetime = datetime.combine(schedule_date, schedule_time)
-        formatted_date = selected_datetime.strftime("%A, %b %d")
+        formatted_date = selected_datetime.strftime("%B %d, %Y")
         formatted_time = selected_datetime.strftime("%I:%M %p")
-        
-        st.info(f"🚨 **Selected time:** {formatted_time}  \n📅 Will be scheduled for: **{formatted_date} at {formatted_time}**")
-        
+
+        st.info(f"📅 **Selected:** {formatted_date} at {formatted_time}")
+
         if selected_datetime < datetime.now():
             st.error("⚠️ Cannot schedule in the past! Please select a future date/time.")
         

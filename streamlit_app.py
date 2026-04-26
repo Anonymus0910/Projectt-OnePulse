@@ -12,6 +12,18 @@ import os
 import json
 
 # Page config must be first Streamlit command
+
+# Add this after your imports (around line 15)
+# ============================================
+# CACHING FOR SPEED
+# ============================================
+@st.cache_resource
+def get_ai_model():
+    """Cache the AI model to avoid reinitialization"""
+    return OnePulseAI()
+
+# Then replace line ~335 where you have "ai_model = OnePulseAI()" with:
+# ai_model = get_ai_model()
 st.set_page_config(
     page_title="OnePulse | Content Scheduler",
     page_icon="🚀",
